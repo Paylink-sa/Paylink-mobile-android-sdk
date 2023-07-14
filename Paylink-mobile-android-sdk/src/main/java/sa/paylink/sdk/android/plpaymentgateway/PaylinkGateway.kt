@@ -35,6 +35,7 @@ class PaylinkGateway(
     }
 
     @JvmName(name = "auth")
+    @Deprecated(message = "Use the auth from the server side")
     fun auth(completion: Callback<String, APIError>) {
         // Implementation for auth method, Build the URL for the auth endpoint
         val urlString = getBaseUrl() + "/api/auth"
@@ -70,7 +71,10 @@ class PaylinkGateway(
         }
     }
 
+    fun submitInvoice() {}
+
     @JvmName("addInvoice")
+    @Deprecated(message = "use AddInvoice from the server side, get the transactionNo and pass it here to method submitInvoice", replaceWith = ReplaceWith("submitInvoice"))
     fun addInvoice(
         idToken: String, customerName: String, customerMobile: String, amount: Double, orderNumber: String, products: List<PLProduct>, completion: Callback<PLOrder, APIError>
     ) {
@@ -78,6 +82,7 @@ class PaylinkGateway(
     }
 
     @JvmName("addInvoice")
+    @Deprecated(message = "use AddInvoice from the server side, get the transactionNo and pass it here to method submitInvoice", replaceWith = ReplaceWith("submitInvoice"))
     fun addInvoice(
         idToken: String, customerName: String, customerMobile: String, customerEmail: String?, amount: Double, currency: String?,
         note: String?, orderNumber: String, products: List<PLProduct>, completion: Callback<PLOrder, APIError>
@@ -179,8 +184,6 @@ class PaylinkGateway(
 
         val w = width ?: (screenWidth - 30)
         val u = "$url?lang=$lang&w=$w&pc=$bgColor&n=$clientName&m=$clientMobile&ts=$topSpace&tc=$textColor&bt=$buttonTextColor&mc=$mainColor&lang=$lang"
-
-        println("URL is: $u");
 
         openInvoiceUrlCallback = callback
 
