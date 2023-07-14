@@ -10,7 +10,7 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
-            <option value="$PROJECT_DIR$/PaylinkGatewaySDK" />
+            <option value="$PROJECT_DIR$/Paylink-mobile-android-sdk" />
             <option value="$PROJECT_DIR$/paylinkgatewaysdktester" />
           </set>
         </option>
