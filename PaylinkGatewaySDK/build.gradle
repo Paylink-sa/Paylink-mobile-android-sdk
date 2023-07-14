@@ -64,3 +64,14 @@ dependencies {
 
 }
 
+// --- Maven Local Publish Script (We only need this for local publish, to test the library)---//
+afterEvaluate {
+    android.libraryVariants.each { variant ->
+        publishing.publications.create(variant.name, MavenPublication) {
+            from components.findByName(variant.name)
+            groupId = 'sa.paylink.sdk.android.plpaymentgateway'
+            artifactId = "paylink-sdk-android"
+            version = '1.0.1'
+        }
+    }
+}
