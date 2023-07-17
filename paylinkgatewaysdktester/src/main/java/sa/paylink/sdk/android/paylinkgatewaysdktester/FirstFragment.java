@@ -28,14 +28,30 @@ public class FirstFragment extends Fragment {
     private FragmentFirstBinding binding;
     private final PaylinkGateway paylinkGateway;
     private Context context;
+    private Environment environment;
 
     public FirstFragment() {
-        this.paylinkGateway = new PaylinkGateway(Environment.TEST);
+        this.environment = Environment.TEST;
+
+        this.paylinkGateway = new PaylinkGateway(this.environment);
         this.context = this.getContext();
     }
 
+    private String getBackendServerUrl() {
+        switch (this.environment) {
+            case TEST:
+                return "https://demo.paylink.sa";
+            case DEV:
+                return "https://frame.eu.ngrok.io";
+            case PRODUCTION:
+            default:
+                return "";
+        }
+    }
+
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle
+            savedInstanceState) {
         binding = FragmentFirstBinding.inflate(inflater, container, false);
         return binding.getRoot();
     }
@@ -77,7 +93,7 @@ public class FirstFragment extends Fragment {
 
     private void createInvoiceInServer(Callback<String, APIError> completion) {
         // Implementation for auth method, Build the URL for the auth endpoint
-        String urlString = "https://demo.paylink.sa/addinvoice.php";
+        String urlString = getBackendServerUrl() + "/addinvoice.php";
         // Create a JSON object with the API credentials
         JsonObjectRequest request = new JsonObjectRequest(
                 urlString,
@@ -105,9 +121,10 @@ public class FirstFragment extends Fragment {
         Volley.newRequestQueue(context).add(request);
     }
 
-    private void checkInvoiceInServer(String transactionNo, Callback<String, APIError> completion) {
+    private void checkInvoiceInServer(String
+                                              transactionNo, Callback<String, APIError> completion) {
         // Implementation for auth method, Build the URL for the auth endpoint
-        String urlString = "https://demo.paylink.sa/getinvoice.php?transactionNo=" + transactionNo;
+        String urlString = getBackendServerUrl() + "/getinvoice.php?transactionNo=" + transactionNo;
         // Create a JSON object with the API credentials
         JsonObjectRequest request = new JsonObjectRequest(
                 urlString,

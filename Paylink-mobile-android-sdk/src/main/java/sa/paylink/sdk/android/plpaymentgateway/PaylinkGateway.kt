@@ -148,6 +148,7 @@ class PaylinkGateway : Callback<PLPaylinkCallbackData, APIError> {
 
         openInvoiceUrlCallback = callback
 
+        println("URL: $u");
         val intent = Intent(context, PLInvoiceWebviewActivity::class.java)
         intent.putExtra(PLInvoiceWebviewActivity.EXTRA_INVOICE_URL, u)
         intent.putExtra(PLInvoiceWebviewActivity.EXTRA_CALLBACK_CLASS, this::class.java)
