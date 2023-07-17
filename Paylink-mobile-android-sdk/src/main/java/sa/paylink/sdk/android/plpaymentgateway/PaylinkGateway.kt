@@ -15,12 +15,60 @@ import sa.paylink.sdk.android.plpaymentgateway.model.PLOrder
 import sa.paylink.sdk.android.plpaymentgateway.model.PLPaylinkCallbackData
 import sa.paylink.sdk.android.plpaymentgateway.model.PLProduct
 
-class PaylinkGateway(
-    private val apiId: String?,
-    private val secretKey: String?,
-    private val environment: Environment,
+class PaylinkGateway : Callback<PLPaylinkCallbackData, APIError> {
+
+    private val apiId: String?
+    private val secretKey: String?
+    private val environment: Environment
     private val context: Context?
-) : Callback<PLPaylinkCallbackData, APIError> {
+    private val paymentFormUrl: String?
+    private var platform: String?
+
+    constructor() {
+        this.apiId = ""
+        this.secretKey = ""
+        this.environment = Environment.PRODUCTION
+        this.context = null
+        this.paymentFormUrl = ""
+        this.platform = ""
+    }
+
+    constructor(paymentFormUrl: String = "", platform: String = "") {
+        this.apiId = "";
+        this.secretKey = ""
+        this.environment = Environment.PRODUCTION
+        this.context = null
+        this.paymentFormUrl = paymentFormUrl
+        this.platform = platform
+    }
+
+    constructor(environment: Environment, paymentFormUrl: String = "", platform: String = "") {
+        this.apiId = "";
+        this.secretKey = ""
+        this.environment = environment
+        this.context = null
+        this.paymentFormUrl = paymentFormUrl
+        this.platform = platform
+    }
+
+    constructor(environment: Environment) {
+        this.apiId = "";
+        this.secretKey = ""
+        this.environment = environment
+        this.context = null
+        this.paymentFormUrl = ""
+        this.platform = ""
+    }
+
+    // Not recommended
+    constructor(apiId: String, secretKey: String, environment: Environment, context: Context) {
+        this.apiId = apiId;
+        this.secretKey = secretKey
+        this.environment = environment
+        this.context = context
+        this.paymentFormUrl = ""
+        this.platform = ""
+    }
 
     companion object {
         var openInvoiceUrlCallback: Callback<PLPaylinkCallbackData, APIError>? = null
@@ -34,8 +82,80 @@ class PaylinkGateway(
         }
     }
 
+    private fun getPayBaseUrl(): String {
+        return when (environment) {
+            Environment.TEST -> "https://paymentpilot.paylink.sa"
+            Environment.DEV -> "https://paylinkpay.eu.ngrok.io"
+            else -> "https://payment.paylink.sa"
+        }
+    }
+
+    override fun onSuccess(response: PLPaylinkCallbackData) {
+        openInvoiceUrlCallback?.onSuccess(response)
+    }
+
+    override fun onError(error: APIError) {
+        openInvoiceUrlCallback?.onError(error)
+    }
+
+    @JvmName(name = "openPaymentForm")
+    fun openPaymentForm(
+        transactionNo: String,
+        context: Context,
+        callback: Callback<PLPaylinkCallbackData, APIError>
+    ) {
+        openPaymentForm(
+            transactionNo, context,
+            width = null, lang = "en", bgColor = null, topSpace = null, textColor = null, buttonTextColor = null,
+            mainColor = null, callback
+        )
+    }
+
+    @JvmName(name = "openPaymentForm")
+    fun openPaymentForm(
+        transactionNo: String,
+        context: Context,
+        width: Int?, lang: String? = "en",
+        bgColor: String?, topSpace: Int?, textColor: String?,
+        buttonTextColor: String?, mainColor: String?,
+        callback: Callback<PLPaylinkCallbackData, APIError>
+    ) {
+
+        // Implementation for openInvoiceURL method
+        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+
+        val screenWidth: Int = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val windowMetrics = windowManager.currentWindowMetrics
+            windowMetrics.bounds.width()
+        } else {
+            val displayMetrics = DisplayMetrics()
+            windowManager.defaultDisplay.getMetrics(displayMetrics)
+            displayMetrics.widthPixels
+        }
+
+        val w = width ?: (screenWidth - 30)
+
+        var u = paymentFormUrl ?: "${getPayBaseUrl()}/pay/info/$transactionNo"
+
+        if (platform.isNullOrEmpty()) {
+            platform = "ios"
+        }
+        u += if (paymentFormUrl.isNullOrEmpty()) {
+            "${getPayBaseUrl()}/pay/frame/$transactionNo?lang=$lang&platform=${platform}&transactionNo=$transactionNo&w=$w&pc=$bgColor&ts=$topSpace&tc=$textColor&bt=$buttonTextColor&mc=$mainColor"
+        } else {
+            "?platform=${platform}&transactionNo=$transactionNo"
+        }
+
+        openInvoiceUrlCallback = callback
+
+        val intent = Intent(context, PLInvoiceWebviewActivity::class.java)
+        intent.putExtra(PLInvoiceWebviewActivity.EXTRA_INVOICE_URL, u)
+        intent.putExtra(PLInvoiceWebviewActivity.EXTRA_CALLBACK_CLASS, this::class.java)
+        context.startActivity(intent)
+    }
+
     @JvmName(name = "auth")
-    @Deprecated(message = "Use the auth from the server side")
+//    @Deprecated("This function is deprecated. This method should be called from server side", ReplaceWith("newAuth(completion)"))
     fun auth(completion: Callback<String, APIError>) {
         // Implementation for auth method, Build the URL for the auth endpoint
         val urlString = getBaseUrl() + "/api/auth"
@@ -71,10 +191,8 @@ class PaylinkGateway(
         }
     }
 
-    fun submitInvoice() {}
-
     @JvmName("addInvoice")
-    @Deprecated(message = "use AddInvoice from the server side, get the transactionNo and pass it here to method submitInvoice", replaceWith = ReplaceWith("submitInvoice"))
+//    @Deprecated("This function is deprecated. Adding invoice should be done in the server side.")
     fun addInvoice(
         idToken: String, customerName: String, customerMobile: String, amount: Double, orderNumber: String, products: List<PLProduct>, completion: Callback<PLOrder, APIError>
     ) {
@@ -82,7 +200,7 @@ class PaylinkGateway(
     }
 
     @JvmName("addInvoice")
-    @Deprecated(message = "use AddInvoice from the server side, get the transactionNo and pass it here to method submitInvoice", replaceWith = ReplaceWith("submitInvoice"))
+//    @Deprecated("This function is deprecated. Adding invoice should be done in the server side.")
     fun addInvoice(
         idToken: String, customerName: String, customerMobile: String, customerEmail: String?, amount: Double, currency: String?,
         note: String?, orderNumber: String, products: List<PLProduct>, completion: Callback<PLOrder, APIError>
@@ -154,6 +272,7 @@ class PaylinkGateway(
     }
 
     @JvmName(name = "openInvoiceURL")
+//    @Deprecated("This function is deprecated.", ReplaceWith("openPaymentForm(completion)"))
     fun openInvoiceURL(
         context: Context, url: String,
         clientName: String, clientMobile: String,
@@ -163,6 +282,7 @@ class PaylinkGateway(
     }
 
     @JvmName(name = "openInvoiceURL")
+//    @Deprecated("This function is deprecated.", ReplaceWith("openPaymentForm(completion)"))
     fun openInvoiceURL(
         context: Context, url: String,
         clientName: String, clientMobile: String, lang: String?,
@@ -191,13 +311,5 @@ class PaylinkGateway(
         intent.putExtra(PLInvoiceWebviewActivity.EXTRA_INVOICE_URL, u)
         intent.putExtra(PLInvoiceWebviewActivity.EXTRA_CALLBACK_CLASS, this::class.java)
         context.startActivity(intent)
-    }
-
-    override fun onSuccess(response: PLPaylinkCallbackData) {
-        openInvoiceUrlCallback?.onSuccess(response)
-    }
-
-    override fun onError(error: APIError) {
-        openInvoiceUrlCallback?.onError(error)
     }
 }

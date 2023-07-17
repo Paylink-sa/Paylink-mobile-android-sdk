@@ -12,11 +12,13 @@ class PLInvoiceWebviewActivity : AppCompatActivity() {
         const val EXTRA_INVOICE_URL = "URL"
         const val EXTRA_CALLBACK_CLASS = "CALLBACK_CLASS"
         private const val CLOSE_URL = "plpaymentgateway"
+        private const val TRANSACTION_NO_URL = "transactionNo="
+        private const val ORDER_NUMBER_URL = "orderNumber="
     }
 
     private lateinit var webView: WebView
 
-    override fun onCreate(savedInstanceState: Bundle?)  {
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_invoice_webview)
 
@@ -67,7 +69,7 @@ class PLInvoiceWebviewActivity : AppCompatActivity() {
             val currentUrl = request!!.url.toString()
 
             // Do something with the URL
-            if (currentUrl.contains(CLOSE_URL)) {
+            if (currentUrl.contains(CLOSE_URL) || (currentUrl.contains(TRANSACTION_NO_URL) && currentUrl.contains(ORDER_NUMBER_URL))) {
                 val query = currentUrl.split("\\?")[1]
                 val map = Splitter.on('&').trimResults().withKeyValueSeparator("=").split(query)
 

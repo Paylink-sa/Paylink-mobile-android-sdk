@@ -9,82 +9,63 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+
+import org.json.JSONException;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import sa.paylink.sdk.android.paylinkgatewaysdktester.databinding.FragmentFirstBinding;
 import sa.paylink.sdk.android.plpaymentgateway.APIError;
-import sa.paylink.sdk.android.plpaymentgateway.Callback;
 import sa.paylink.sdk.android.plpaymentgateway.Environment;
 import sa.paylink.sdk.android.plpaymentgateway.PaylinkGateway;
-import sa.paylink.sdk.android.plpaymentgateway.model.PLOrder;
 import sa.paylink.sdk.android.plpaymentgateway.model.PLPaylinkCallbackData;
-import sa.paylink.sdk.android.plpaymentgateway.model.PLProduct;
 
 public class FirstFragment extends Fragment {
 
     private FragmentFirstBinding binding;
-    private PaylinkGateway paylinkGateway;
-    private final String APP_ID = "APP_ID_1123453311";
-    private final String SECRET_KEY = "0662abb5-13c7-38ab-cd12-236e58f43766";
-    private final Context context;
+    private final PaylinkGateway paylinkGateway;
+    private Context context;
 
     public FirstFragment() {
+        this.paylinkGateway = new PaylinkGateway(Environment.TEST);
         this.context = this.getContext();
     }
 
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        this.paylinkGateway = new PaylinkGateway(APP_ID, SECRET_KEY, Environment.TEST, this.getContext());
         binding = FragmentFirstBinding.inflate(inflater, container, false);
         return binding.getRoot();
     }
 
     private void processPayment() {
-        this.paylinkGateway.auth(new Callback<String, APIError>() {
+        createInvoiceInServer(new Callback<String, APIError>() {
             @Override
-            public void onSuccess(String token) {
-                System.out.println("token is: " + token);
-
-                List<PLProduct> products = new ArrayList<>();
-
-                products.add(new PLProduct("Product 1", 25, 1));
-                products.add(new PLProduct("Product 2", 25, 1));
-                products.add(new PLProduct("Product 3", 25, 2));
-
-                paylinkGateway.addInvoice(token,
-                        "Zaid Matooq",
-                        "0509200900",
-                        100,
-                        "MERCHANT_ORDER_NUMBER",
-                        products,
-                        new Callback<PLOrder, APIError>() {
+            public void onSuccess(String transactionNo) {
+                paylinkGateway.openPaymentForm(transactionNo, context, new sa.paylink.sdk.android.plpaymentgateway.Callback<PLPaylinkCallbackData, APIError>() {
+                    @Override
+                    public void onSuccess(PLPaylinkCallbackData response) {
+                        System.out.println("response is: " + response);
+                        checkInvoiceInServer(response.getTransactionNo(), new Callback<String, APIError>() {
                             @Override
-                            public void onSuccess(PLOrder order) {
-                                System.out.println("order is: " + order.toString());
-
-                                paylinkGateway.openInvoiceURL(getContext(), order.getMobileUrl(), order.getGatewayOrderRequest().getClientName(), order.getGatewayOrderRequest().getClientMobile(),
-                                        new Callback<PLPaylinkCallbackData, APIError>() {
-                                            @Override
-                                            public void onSuccess(PLPaylinkCallbackData response) {
-                                                System.out.println("response is: " + response);
-                                            }
-
-                                            @Override
-                                            public void onError(APIError error) {
-                                                System.out.println("Error is: " + error);
-                                            }
-                                        }
-                                );
+                            public void onSuccess(String orderStatus) {
+                                System.out.println("order status is: " + orderStatus);
                             }
 
                             @Override
                             public void onError(APIError error) {
                                 System.out.println("error is: " + error);
                             }
-                        }
-                );
+                        });
+                    }
+
+                    @Override
+                    public void onError(APIError error) {
+                        System.out.println("error is: " + error);
+                    }
+                });
             }
 
             @Override
@@ -92,6 +73,63 @@ public class FirstFragment extends Fragment {
                 System.out.println("API Error: " + error);
             }
         });
+    }
+
+    private void createInvoiceInServer(Callback<String, APIError> completion) {
+        // Implementation for auth method, Build the URL for the auth endpoint
+        String urlString = "https://demo.paylink.sa/addinvoice.php";
+        // Create a JSON object with the API credentials
+        JsonObjectRequest request = new JsonObjectRequest(
+                urlString,
+                response -> {
+                    String transactionNo = null;
+                    try {
+                        transactionNo = response.getString("transactionNo");
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    completion.onSuccess(transactionNo);
+                },
+                error -> completion.onError(new APIError(APIError.Type.JSON_ERROR, "Error parsing auth response. " + error.getMessage()))) {
+            @Override
+            public Map<String, String> getHeaders() {
+                Map<String, String> headers = new HashMap<>();
+                headers.put("Content-Type", "application/json");
+                return headers;
+            }
+        };
+        // Add the request to the queue to be executed
+        if (context == null) {
+            context = getContext();
+        }
+        Volley.newRequestQueue(context).add(request);
+    }
+
+    private void checkInvoiceInServer(String transactionNo, Callback<String, APIError> completion) {
+        // Implementation for auth method, Build the URL for the auth endpoint
+        String urlString = "https://demo.paylink.sa/getinvoice.php?transactionNo=" + transactionNo;
+        // Create a JSON object with the API credentials
+        JsonObjectRequest request = new JsonObjectRequest(
+                urlString,
+                response -> {
+                    String orderStatus = null;
+                    try {
+                        orderStatus = response.getString("orderStatus");
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    completion.onSuccess(orderStatus);
+                },
+                error -> completion.onError(new APIError(APIError.Type.JSON_ERROR, "Error parsing auth response. " + error.getMessage()))) {
+            @Override
+            public Map<String, String> getHeaders() {
+                Map<String, String> headers = new HashMap<>();
+                headers.put("Content-Type", "application/json");
+                return headers;
+            }
+        };
+        // Add the request to the queue to be executed
+        Volley.newRequestQueue(context).add(request);
     }
 
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
@@ -107,5 +145,52 @@ public class FirstFragment extends Fragment {
         super.onDestroyView();
         binding = null;
     }
+
+    //    private void processPayment() {
+//        this.paylinkGateway.auth(new Callback<String, APIError>() {
+//            @Override
+//            public void onSuccess(String token) {
+//                System.out.println("token is: " + token);
+//                List<PLProduct> products = new ArrayList<>();
+//                products.add(new PLProduct("Product 1", 25, 1));
+//                products.add(new PLProduct("Product 2", 25, 1));
+//                products.add(new PLProduct("Product 3", 25, 2));
+//                paylinkGateway.addInvoice(token,
+//                        "Zaid Matooq",
+//                        "0509200900",
+//                        100,
+//                        "MERCHANT_ORDER_NUMBER",
+//                        products,
+//                        new Callback<PLOrder, APIError>() {
+//                            @Override
+//                            public void onSuccess(PLOrder order) {
+//                                System.out.println("order is: " + order.toString());
+//                                paylinkGateway.openInvoiceURL(getContext(), order.getMobileUrl(), order.getGatewayOrderRequest().getClientName(), order.getGatewayOrderRequest().getClientMobile(),
+//                                        new Callback<PLPaylinkCallbackData, APIError>() {
+//                                            @Override
+//                                            public void onSuccess(PLPaylinkCallbackData response) {
+//                                                System.out.println("response is: " + response);
+//                                            }
+//                                            @Override
+//                                            public void onError(APIError error) {
+//                                                System.out.println("Error is: " + error);
+//                                            }
+//                                        }
+//                                );
+//                            }
+//                            @Override
+//                            public void onError(APIError error) {
+//                                System.out.println("error is: " + error);
+//                            }
+//                        }
+//                );
+//            }
+//            @Override
+//            public void onError(APIError error) {
+//                System.out.println("API Error: " + error);
+//            }
+//        });
+//    }
+
 
 }
