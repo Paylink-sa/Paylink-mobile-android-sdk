@@ -70,7 +70,7 @@ class PLInvoiceWebviewActivity : AppCompatActivity() {
 
             // Do something with the URL
             if (currentUrl.contains(CLOSE_URL) || (currentUrl.contains(TRANSACTION_NO_URL) && currentUrl.contains(ORDER_NUMBER_URL))) {
-                val query = currentUrl.split("\\?")[1]
+                val query = currentUrl.split("?")[1]
                 val map = Splitter.on('&').trimResults().withKeyValueSeparator("=").split(query)
 
                 val transactionNo = map["transactionNo"]
