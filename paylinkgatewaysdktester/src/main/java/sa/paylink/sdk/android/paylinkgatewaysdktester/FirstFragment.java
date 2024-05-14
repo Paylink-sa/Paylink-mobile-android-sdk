@@ -12,6 +12,7 @@ import androidx.fragment.app.Fragment;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONException;
 
 import java.util.HashMap;
@@ -62,7 +63,7 @@ public class FirstFragment extends Fragment {
             public void onSuccess(String transactionNo) {
                 paylinkGateway.openPaymentForm(transactionNo, context, new sa.paylink.sdk.android.plpaymentgateway.Callback<PLPaylinkCallbackData, APIError>() {
                     @Override
-                    public void onSuccess(PLPaylinkCallbackData response) {
+                    public void onSuccess(@NotNull PLPaylinkCallbackData response) {
                         System.out.println("response is: " + response);
                         checkInvoiceInServer(response.getTransactionNo(), new Callback<String, APIError>() {
                             @Override
